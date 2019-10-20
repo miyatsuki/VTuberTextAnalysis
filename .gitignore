@@ -1,0 +1,7 @@
+env
+results/
+sentences/
+sources/
+words/
+words_tfidf/
+.DS_Store
