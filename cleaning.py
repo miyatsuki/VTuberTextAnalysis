@@ -98,5 +98,8 @@ with open('tweets.json', 'r') as f:
             pbar.update(1)
 
 
-with open("channel_sentence_map.json", "w") as f:
-    json.dump(channel_sentence_map, f, ensure_ascii=False, indent=4)
+for channelTitle in channel_sentence_map:
+    filename = channelTitle.replace("/", "_")
+
+    with open("sentences/" + filename + ".json", "w") as f:
+        json.dump(channel_sentence_map[channelTitle], f, ensure_ascii=False, indent=2)

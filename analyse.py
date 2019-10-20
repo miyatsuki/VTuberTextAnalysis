@@ -3,11 +3,13 @@ import json
 import pathlib
 from tqdm import tqdm, trange
 import sys
+import multiprocessing
+from collections import namedtuple
 
-gram2_map = {}
-gram3_map = {}
-gram4_map = {}
-channel_word_map = {}
+# gram2_map = {}
+# gram3_map = {}
+# gram4_map = {}
+# channel_word_map = {}
 
 path = pathlib.Path("video/")
 json_list = list(path.glob("*.json"))
@@ -39,18 +41,26 @@ def getNgrams(textArray, N):
         ans.append("".join(textArray[i : i + N]))
     return ans
 
+t = Tokenizer("simpledic.csv", udic_type="simpledic", udic_enc="utf8")
+def createMapFile(path):
+    ans = {}
 
-def addMap(index, text, tokenizer):
-    if index not in channel_word_map:
-        channel_word_map[index] = {}
+    sentences = []
+    with open(path) as f:
+        sentences = json.load(f) 
 
-    words = getWords(tokenizer, text)
-    for word in words:
-        if word not in channel_word_map[index]:
-            channel_word_map[index][word] = 0
+    for text in sentences:
+        words = getWords(t, text)
+        for word in words:
+            if word not in ans:
+                ans[word] = 0
 
-        channel_word_map[index][word] += 1
+            ans[word] += 1
 
+    with open("words/" + path.name, "w") as f:
+        json.dump(ans, f, ensure_ascii=False, indent=2)
+
+    """
     token_list = getTokens(tokenizer, text)
     
     gram2_list = getNgrams(token_list, 2)
@@ -70,49 +80,26 @@ def addMap(index, text, tokenizer):
         if gram not in gram4_map:
             gram4_map[gram] = 0
         gram4_map[gram] += 1
+    """
+
+#with open("gram2_map.json", "w") as f:
+#    json.dump(gram2_map, f, ensure_ascii=False)
+
+#with open("gram3_map.json", "w") as f:
+#    json.dump(gram3_map, f, ensure_ascii=False)
+
+#with open("gram4_map.json", "w") as f:
+#    json.dump(gram4_map, f, ensure_ascii=False)
 
 
-t = Tokenizer("simpledic.csv", udic_type="simpledic", udic_enc="utf8")
+def main():
+    p = pathlib.Path('sentences/')
+    path_list = p.glob("*.json")
 
-for i in trange(len(json_list)):
-    filePath = json_list[i]
-
-    with open(filePath, "r") as f:
-        info = json.load(f)
-
-        channelTitle = info["snippet"]["channelTitle"]
-        title = info["snippet"]["title"]
-        description = info["snippet"]["description"]
-
-        addMap(channelTitle, title, t)
-        addMap(channelTitle, description, t)
+    print(multiprocessing.cpu_count())
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
+        p.map(createMapFile, path_list)
 
 
-num_lines = sum(1 for line in open('tweets.json'))
-with open('tweets.json', 'r') as f:
-    with tqdm(total = num_lines) as pbar:
-        for line in f:
-            data = json.loads(line.strip())
-
-            screen_name = data["screen_name"]
-            text = data["text"]
-
-            if screen_name not in channel_word_map:
-                channel_word_map[channelTitle] = {}
-
-            addMap(screen_name, text, t)
-            pbar.update(1)
-
-
-with open("channel_word_map.json", "w") as f:
-    json.dump(channel_word_map, f, ensure_ascii=False)
-
-
-with open("gram2_map.json", "w") as f:
-    json.dump(gram2_map, f, ensure_ascii=False)
-
-with open("gram3_map.json", "w") as f:
-    json.dump(gram3_map, f, ensure_ascii=False)
-
-with open("gram4_map.json", "w") as f:
-    json.dump(gram4_map, f, ensure_ascii=False)
+if __name__ == "__main__":
+    main()
