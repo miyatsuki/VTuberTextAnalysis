@@ -38,22 +38,9 @@ def hasURL(sentence):
     if "©" in sentence:
         return True
 
-    # ans = re.sub('http.*', '', sentence).strip()
-
-    # h抜き
-    # ans = re.sub('ttp.*', '', ans).strip()
-
-    # http抜き
-    # ans = re.sub('s://.*', '', ans).strip()
-
-    # http://抜き
-    # ans = re.sub('://.*', '', ans).strip()
-
-    # プロトコル抜き
-    # ans = re.sub('www\..+\..+', '', ans).strip()
-
-    # メール基本形(gmail)
-    # ans = re.sub('.*gmail\.com.*",', '', ans).strip()
+    # RTは除外
+    if sentence.startswith("RT "):
+        return True
 
     return False
 
