@@ -5,16 +5,16 @@ import sys
 import os
 import re
 
-path = pathlib.Path("video/")
+path = pathlib.Path("sources/video/")
 json_list = list(path.glob("*.json"))
 
-channel_sentence_map = {}
+raw_channel_sentence_map = {}
 
 def replaceFullSpace(sentence):
     return sentence.replace('　', ' ').strip()
 
 
-def hasURL(sentence):
+def hasInvalidText(sentence):
     # 基本形
     if "http" in sentence:
         return True
@@ -46,13 +46,14 @@ def hasURL(sentence):
 
 
 def addMap(channel, text):
-    if channel not in channel_sentence_map:
-        channel_sentence_map[channel] = []
+    channel = channel.replace("/", "_")
+    if channel not in raw_channel_sentence_map:
+        raw_channel_sentence_map[channel] = []
 
     for raw_sentence in text.split("\n"):
         sentence = replaceFullSpace(raw_sentence.strip())
-        if not hasURL(sentence) and len(sentence) > 0:
-            channel_sentence_map[channel].append(sentence)
+        if not hasInvalidText(sentence) and len(sentence) > 0:
+            raw_channel_sentence_map[channel].append(sentence)
 
     return
 
@@ -69,8 +70,8 @@ for filePath in tqdm(json_list):
         addMap(channelTitle, description)
 
 
-num_lines = sum(1 for line in open('tweets.json'))
-with open('tweets.json', 'r') as f:
+num_lines = sum(1 for line in open('sources/tweets.json'))
+with open('sources/tweets.json', 'r') as f:
     with tqdm(total = num_lines) as pbar:
         for line in f:
             data = json.loads(line.strip())
@@ -78,15 +79,35 @@ with open('tweets.json', 'r') as f:
             screen_name = data["screen_name"]
             text = data["text"]
 
-            if screen_name not in channel_sentence_map:
-                channel_sentence_map[channelTitle] = {}
+            if screen_name not in raw_channel_sentence_map:
+                raw_channel_sentence_map[channelTitle] = {}
 
             addMap(screen_name, text)
             pbar.update(1)
 
+nayose_map = {}
+with open("nayose.tsv") as f:
+    for line in f:
+        before = line.strip().split("\t")[0]
+        after = line.strip().split("\t")[1]
+        nayose_map[before] = after
 
+channel_sentence_map = {}
+for raw_channelTitle in raw_channel_sentence_map:
+    sentences = raw_channel_sentence_map[raw_channelTitle]
+
+    if raw_channelTitle not in nayose_map:
+        print(raw_channelTitle)
+        continue
+
+    channelTitle = nayose_map[raw_channelTitle]
+
+    if channelTitle not in channel_sentence_map:
+        channel_sentence_map[channelTitle] = []
+
+    channel_sentence_map[channelTitle] += sentences
+
+# save
 for channelTitle in channel_sentence_map:
-    filename = channelTitle.replace("/", "_")
-
-    with open("sentences/" + filename + ".json", "w") as f:
+    with open('sentences/' + channelTitle + ".json", 'w') as f:
         json.dump(channel_sentence_map[channelTitle], f, ensure_ascii=False, indent=2)
